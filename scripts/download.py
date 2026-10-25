@@ -7,6 +7,7 @@ Downloads:
   * Spider 1.0 (spider_data.zip)     -> data/spider/
   * teacher + student weights         -> models/<local_dir>/  (pinned in configs/models.yaml)
   * taoyds/test-suite-sql-eval        -> third_party/test-suite-sql-eval/
+  * NLTK punkt tokenizer (used by it)  -> ~/nltk_data/ (NLTK refuses group-writable dirs)
 """
 
 from __future__ import annotations
@@ -89,6 +90,15 @@ def download_test_suite() -> None:
     print(f"[eval] cloned test-suite-sql-eval @ {rev[:10]}")
 
 
+def download_nltk() -> None:
+    import nltk
+
+    # Default location (~/nltk_data): newer NLTK rejects data dirs with group-writable ancestors.
+    for pkg in ("punkt", "punkt_tab"):
+        assert nltk.download(pkg, quiet=True), f"failed to download NLTK {pkg}"
+    print("[eval] NLTK punkt data ready")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--skip-spider", action="store_true")
@@ -104,6 +114,7 @@ def main() -> None:
         download_spider()
     if not args.skip_eval:
         download_test_suite()
+        download_nltk()
     if not args.skip_models:
         download_models()
     print("done.")

@@ -38,7 +38,9 @@ download = [
 ]
 dev = [
     "pytest>=8",
-    "nltk",  # required by test-suite-sql-eval
+    # required by third_party/test-suite-sql-eval (scoring in #3)
+    "nltk",
+    "sqlparse",
 ]
 
 [tool.setuptools.packages.find]

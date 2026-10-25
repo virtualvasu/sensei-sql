@@ -65,8 +65,11 @@ def run_model(role: str) -> None:
     spec = yaml.safe_load((CONFIGS / "models.yaml").read_text())[role]
     llm = LLM(model=str(MODELS / spec["local_dir"]), seed=0, **spec.get("vllm", {}))
     messages = [{"role": "user", "content": PROMPT}]
-    chat_kwargs = {"chat_template_kwargs": {"enable_thinking": False}} if role == "teacher" else {}
-    out = llm.chat(messages, SamplingParams(temperature=0.0, max_tokens=64), **chat_kwargs)
+    out = llm.chat(
+        messages,
+        SamplingParams(temperature=0.0, max_tokens=64),
+        chat_template_kwargs=spec.get("chat_template_kwargs"),
+    )
     text = out[0].outputs[0].text.strip()
     print(f"[{role}] completion: {text!r}")
     assert text, f"{role} produced an empty completion"

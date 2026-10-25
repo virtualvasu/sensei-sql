@@ -1,0 +1,23 @@
+# Settings shared by every evaluation run (python -m sensei_sql.eval).
+generation:
+  temperature: 0.0      # greedy
+  max_tokens: 256
+  seed: 0
+
+# Per-query latency is measured one question at a time (interactive use);
+# throughput is measured separately with this many questions per batch.
+throughput_batch_size: 32
+
+# Fixed KV-cache size for every model so peak VRAM is comparable across models
+# (otherwise vLLM pre-allocates gpu_memory_utilization of the card regardless of model size).
+kv_cache_gib: 2.0
+
+# SQL execution limits when scoring predictions.
+exec_timeout_s: 10.0
+
+few_shot:
+  # Few-shot examples are drawn from train_spider only (never dev/test databases):
+  # one easy, one medium, one hard question, each from a different database.
+  hardness: [easy, medium, hard]
+  max_schema_tokens: 600
+  seed: 0

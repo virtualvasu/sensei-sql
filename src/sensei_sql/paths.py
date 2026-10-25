@@ -11,3 +11,4 @@ THIRD_PARTY = ROOT / "third_party"
 
 SPIDER = DATA / "spider"
 SPIDER_DB = SPIDER / "database"
+TEST_SUITE = THIRD_PARTY / "test-suite-sql-eval"
