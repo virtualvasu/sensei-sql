@@ -1,0 +1,25 @@
+# Pinned model checkpoints. scripts/download.py fetches these into models/<local_dir>.
+teacher:
+  # Qwen3.5-9B in bf16 is ~19 GB, which leaves no KV-cache room on a 20 GB RTX 4000 Ada.
+  # FP8-dynamic (W8A8, native on Ada sm_89) is ~14 GB on disk incl. vision tower; the text
+  # weights leave several GB for KV cache. Fallback: cpu_offload_gb with the bf16 base.
+  repo_id: RedHatAI/Qwen3.5-9B-FP8-dynamic
+  revision: 790f0576d2d77dd5322aa0603a470bd9e3a3d1f6
+  local_dir: teacher-qwen3.5-9b-fp8
+  vllm:
+    max_model_len: 8192
+    gpu_memory_utilization: 0.90
+    # text-only: don't load the vision encoder at all
+    language_model_only: true
+    # weights take ~11 GiB; vLLM's defaults (256 seqs, 8192 batched tokens) OOM during
+    # CUDA-graph profiling on 20 GB, so cap the batch shape
+    max_num_seqs: 64
+    max_num_batched_tokens: 4096
+
+student:
+  repo_id: Qwen/Qwen2.5-Coder-1.5B-Instruct
+  revision: 2e1fd397ee46e1388853d2af2c993145b0f1098a
+  local_dir: student-qwen2.5-coder-1.5b
+  vllm:
+    max_model_len: 8192
+    gpu_memory_utilization: 0.50

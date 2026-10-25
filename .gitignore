@@ -1,0 +1,22 @@
+# Large artefacts
+data/
+models/
+outputs/
+third_party/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Caches / local env
+.cache/
+.env.local
+wandb/
+.ipynb_checkpoints/
+.vscode/
