@@ -1,0 +1,27 @@
+# python -m sensei_sql.app
+title: sensei-sql
+host: 127.0.0.1
+port: 7860
+
+backend: vllm          # vllm | transformers | llama-server | ollama
+
+vllm:                  # GPU
+  model: models/student-merged      # fine-tuned student (#5); or "student" + adapter
+  adapter: null
+  kv_cache_gib: 2.0
+
+transformers:          # GPU or CPU, no extra deps
+  model_dir: models/student-merged
+  device: auto         # auto | cuda | cpu
+
+llama-server:          # CPU, GGUF from #5 (needs third_party/llama.cpp built)
+  gguf: models/student-gguf/student-Q4_K_M.gguf
+  threads: null        # default: all cores
+
+ollama:                # a local Ollama with the GGUF imported (ollama create sensei-sql -f Modelfile)
+  model: sensei-sql
+  url: http://127.0.0.1:11434
+
+exec_timeout_s: 10.0
+max_rows: 1000
+self_correct: true     # on an execution error, show the error to the model and retry once

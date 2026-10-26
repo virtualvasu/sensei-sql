@@ -45,6 +45,18 @@ def student_messages(schema: str, question: str) -> Messages:
     return answer_messages(schema, question)
 
 
+def correction_messages(messages: Messages, failed_sql: str, error: str) -> Messages:
+    """Follow-up turn asking the model to fix a query that failed to execute (app self-correction)."""
+    return messages + [
+        {"role": "assistant", "content": failed_sql},
+        {
+            "role": "user",
+            "content": f"That query failed with this error:\n{error}\n\n"
+            "Write a corrected SQLite SELECT query. Reply with the SQL query only.",
+        },
+    ]
+
+
 def render_prompt(tokenizer, messages: Messages, **template_kwargs) -> str:
     """Apply a Hugging Face tokenizer's chat template, ready for generation."""
     return tokenizer.apply_chat_template(
