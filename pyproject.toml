@@ -41,6 +41,8 @@ dev = [
     # required by third_party/test-suite-sql-eval (scoring in #3)
     "nltk",
     "sqlparse",
+    # training curves (#5) and results plots (#6)
+    "matplotlib",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,0 +1,3 @@
+# Variant (c) human + teacher pairs.
+defaults: base.yaml
+data: [human, teacher]

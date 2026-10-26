@@ -1,0 +1,3 @@
+# Variant (b) execution-verified teacher pairs from #4.
+defaults: base.yaml
+data: [teacher]
