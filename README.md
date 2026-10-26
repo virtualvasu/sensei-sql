@@ -136,3 +136,56 @@ Each run writes `outputs/eval/<run>/predictions.jsonl` (`db_id`, `question`, `go
 - **Size on disk:** model directory (+ adapter). The teacher checkpoint includes its unused
   vision encoder.
 - Decoding is greedy with a fixed seed, so re-running a model gives the same predictions.
+
+## Fine-tuning (QLoRA) and export
+
+```bash
+python -m sensei_sql.train configs/train/human.yaml      # Spider train only
+python -m sensei_sql.train configs/train/teacher.yaml    # teacher pairs only
+python -m sensei_sql.train configs/train/combined.yaml   # both          (make train = all three)
+python -m sensei_sql.eval --model student --adapter models/adapters/combined
+python -m sensei_sql.train.export merge  --adapter models/adapters/combined  # -> models/student-merged/
+python -m sensei_sql.train.export verify --adapter models/adapters/combined  # merged == adapter?
+python -m sensei_sql.train.export gguf   # -> models/student-gguf/ (needs third_party/llama.cpp built)
+```
+
+The 4-bit (NF4, double quant, bf16 compute) student gets a LoRA adapter (r=16, α=32, dropout 0.05,
+all linear layers). It is trained with TRL's `SFTTrainer` on prompt/completion pairs, with loss on the
+SQL only. The prompts are the same ones the eval harness uses. Settings: 2 epochs, lr 2e-4 with a
+cosine schedule and 3% warmup, effective batch 16, gradient checkpointing, and batches grouped by
+length. That last setting cuts step time from ~12 s to ~5 s, because prompts range from ~300 to 4,096
+tokens. Examples longer than 4,096 tokens are dropped (<1%), not truncated. 2% of the training pairs
+are held out for validation, and the adapter with the lowest validation loss is kept. Settings live in
+`configs/train/base.yaml`; the variant files only set `data`. Each run writes
+`outputs/train/<run>/{notes.json,log_history.json,loss.png}`.
+
+| variant | train examples | steps | time | best val loss | peak VRAM (train) |
+|---|---|---|---|---|---|
+| human | 8,406 | 1,052 | 94 min | 0.065 | 8.3 GiB |
+| teacher | 23,149 | 2,894 | 250 min | 0.106 | 8.4 GiB |
+| combined | 31,552 | 3,944 | 350 min | 0.114 | 8.4 GiB |
+
+The validation losses are not comparable across variants: each is measured on that variant's own
+held-out data, and the teacher's synthetic questions are more varied than Spider's. Spider dev, zero-shot (official
+test-suite scorer, execution accuracy):
+
+| model | EX | easy | medium | hard | extra | p50 latency | throughput (bs 32) | peak VRAM | size |
+|---|---|---|---|---|---|---|---|---|---|
+| teacher Qwen3.5-9B FP8 | **0.782** | 0.940 | 0.834 | 0.707 | 0.488 | 945 ms | 4.2 q/s | 15.5 GiB | 13.1 GiB |
+| student base | 0.672 | 0.867 | 0.729 | 0.512 | 0.398 | 214 ms | 42.7 q/s | 6.5 GiB | 2.9 GiB |
+| student + human | 0.755 | 0.907 | 0.812 | 0.632 | 0.506 | 224 ms | 38.7 q/s | 7.2 GiB | 3.0 GiB |
+| student + teacher | 0.769 | 0.911 | 0.834 | 0.713 | 0.440 | 244 ms | 42.4 q/s | 7.2 GiB | 3.0 GiB |
+| student + combined | 0.772 | 0.923 | 0.807 | 0.707 | 0.518 | 235 ms | 39.0 q/s | 7.2 GiB | 3.0 GiB |
+| **student merged (combined)** | **0.773** | 0.919 | 0.812 | 0.713 | 0.512 | 206 ms | 44.1 q/s | 6.5 GiB | 2.9 GiB |
+
+Training on teacher pairs alone beats training on Spider's human labels (0.769 vs 0.755), and
+combining both is best: the 1.5B student comes within 1 point of the 9B teacher, while answering
+~4.5× faster and ~10× more queries/s in under half the VRAM. The adapter rows run the
+LoRA through vLLM, which adds latency and memory; merging removes it.
+
+**Export.** `merge` folds the combined adapter into fp16 weights (`models/student-merged/`, 2.9 GiB),
+and the app and later evaluations use that model. `verify` regenerates the first 50 dev questions. 47 of 50
+merged outputs are identical to adapter+base; the 3 that differ only in identifier case or
+spacing and give the same execution result (fp16 merge vs bf16 LoRA rounding). Results are in
+`outputs/export/verify.json`. `gguf` converts the merged model to f16/Q8_0/Q4_K_M GGUF for llama.cpp or
+Ollama, using `third_party/llama.cpp`, which must be cloned and built separately (`cmake -B build && cmake --build build`).
