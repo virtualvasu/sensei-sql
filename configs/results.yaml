@@ -1,0 +1,29 @@
+# python -m sensei_sql.eval.analysis -> outputs/results/
+# Eval run names come from python -m sensei_sql.eval (outputs/eval/<run>/). Missing runs are skipped.
+reference_teacher: teacher-zeroshot-dev   # for "% of teacher accuracy retained" and "speed-up"
+
+main:
+  - {label: "Teacher Qwen3.5-9B (FP8), zero-shot", run: teacher-zeroshot-dev, kind: teacher}
+  - {label: "Teacher Qwen3.5-9B (FP8), 3-shot", run: teacher-fewshot-dev, kind: teacher}
+  - {label: "Student Qwen2.5-Coder-1.5B, no fine-tuning", run: student-zeroshot-dev, kind: student}
+  - {label: "Student (a) human-only", run: student-human-zeroshot-dev, kind: student}
+  - {label: "Student (b) teacher-only", run: student-teacher-zeroshot-dev, kind: student}
+  - {label: "Student (c) human + teacher", run: student-combined-zeroshot-dev, kind: student}
+  - {label: "Best student, merged fp16 (GPU)", run: student-merged-zeroshot-dev, kind: student}
+
+cpu:  # subset runs from python -m sensei_sql.eval.cpu (glob)
+  glob: "cpu-*"
+
+ablation_size:   # share of teacher pairs used in training
+  "(b) teacher-only":
+    25: student-teacher-teacher25pct-zeroshot-dev
+    50: student-teacher-teacher50pct-zeroshot-dev
+    100: student-teacher-zeroshot-dev
+  "(c) human + teacher":
+    25: student-combined-teacher25pct-zeroshot-dev
+    50: student-combined-teacher50pct-zeroshot-dev
+    100: student-combined-zeroshot-dev
+
+error_analysis:
+  num_failures: 100
+  seed: 0

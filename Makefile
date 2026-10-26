@@ -9,7 +9,7 @@ TORCH_INDEX := https://download.pytorch.org/whl/cu128
 include .env
 export
 
-.PHONY: venv install install-app download check test
+.PHONY: venv install install-app download check test teacher train results app
 
 venv:
 	python3 -m venv $(VENV)
@@ -29,3 +29,17 @@ check:
 
 test:
 	$(PY) -m pytest -q
+
+# --- pipeline -------------------------------------------------------------------------------
+teacher:            # teacher data generation over all training DBs (#4), resumable
+	$(PY) -m sensei_sql.teacher
+
+train:              # three QLoRA variants (#5)
+	for v in human teacher combined; do $(PY) -m sensei_sql.train configs/train/$$v.yaml || exit 1; done
+
+results:            # tables, plots, ablations, error analysis (#6)
+	$(PY) -m sensei_sql.eval.aggregate
+	$(PY) -m sensei_sql.eval.analysis
+
+app:                # offline NL-to-SQL app (#7); backend in configs/app.yaml
+	$(PY) -m sensei_sql.app
