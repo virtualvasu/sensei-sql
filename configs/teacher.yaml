@@ -1,0 +1,43 @@
+# Teacher data generation (python -m sensei_sql.teacher). Training databases only.
+seed: 0
+
+synthesis:
+  # Requests per (database, pattern); each asks for `pairs_per_request` question/SQL pairs.
+  # Patterns are sensei_sql.core.prompts.PATTERNS. Pilot (5 DBs, 3 requests) kept ~52 synth
+  # pairs/DB -> ~13k total with relabel, under the 15k-30k target; 5 requests -> ~17k.
+  requests_per_pattern: 5
+  pairs_per_request: 10
+  temperature: 0.9
+  top_p: 0.95
+  max_tokens: 2048
+
+relabel:
+  # Teacher answers Spider's own train questions (train_spider + train_others), greedy.
+  temperature: 0.0
+  max_tokens: 256
+
+self_consistency:
+  # Re-ask each synthesised question N times; keep if more than `min_agree` samples
+  # return the same execution result as the synthesised SQL.
+  num_samples: 5
+  min_agree: 3
+  temperature: 0.7
+  top_p: 0.95
+  max_tokens: 256
+
+filters:
+  exec_timeout_s: 5.0
+  max_rows: 10000
+  # Fraction of kept pairs (per database and source) allowed to return an empty result
+  # (no rows, or only NULLs).
+  max_empty_fraction: 0.05
+  # Dedup within a database: drop repeated questions; keep at most this many questions per
+  # identical normalised SQL (Spider itself has ~2 paraphrases per SQL).
+  max_questions_per_sql: 2
+
+# DBs per vLLM batch / checkpoint. Work files are appended after each chunk, so an
+# interrupted run resumes from the next unfinished database.
+dbs_per_chunk: 8
+
+report:
+  num_samples: 50

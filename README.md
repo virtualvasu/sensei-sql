@@ -74,6 +74,40 @@ make test
 referenced `.sqlite` file opens read-only, and that both models load from `models/` and generate
 with the offline flags set.
 
+## Teacher data generation
+
+```bash
+python -m sensei_sql.teacher --limit-dbs 5 --out data/distill/pilot   # pilot
+python -m sensei_sql.teacher                                          # all 146 train DBs (make teacher)
+```
+
+Training databases only (`train_spider` + `train_others`, 146 DBs); an assertion fails if any dev
+database appears. Settings are in `configs/teacher.yaml`. Two sources:
+
+- **Synthesis:** per database and SQL pattern (single-table filters, aggregation/GROUP BY/HAVING,
+  joins, nested subqueries, ORDER BY…LIMIT, set operations) the teacher writes 5 × 10
+  question/SQL pairs (temperature 0.9, seeded per request).
+- **Relabelling:** the teacher answers Spider's own 8,659 training questions (greedy).
+
+Every pair must pass: parses (sqlglot) → executes read-only within 5 s → non-empty result (at most
+5% empty kept) → **self-consistency** (synth: ≥3 of 5 re-samples at T=0.7 reproduce the result) or
+**gold check** (relabel: same result as Spider's gold SQL) → dedup (no repeated question per DB, ≤2
+questions per normalised SQL). Runs are resumable (`data/distill/work/<source>.{jsonl,done}`).
+Prefix caching is turned on for the teacher here, which speeds up the 5× re-sampling ~1.7×.
+
+Result (full run, ~7.5 h on the RTX 4000 Ada): **23,703 verified pairs** in
+`data/distill/teacher_pairs.jsonl` (18,346 synthesised + 5,357 relabelled; 16–245 per database,
+median 170). Pass rates per stage, pattern/hardness distributions and 50 random samples are in
+`data/distill/stats.md`:
+
+| stage | synth in → passed | relabel in → passed |
+|---|---|---|
+| parse | 41,055 → 40,797 | 8,659 → 8,656 |
+| execute | → 39,041 | → 8,388 |
+| non-empty | → 33,236 | → 6,839 |
+| self-consistency / gold check | → 18,986 (57%) | → 5,410 (79%) |
+| dedup | → 18,346 | → 5,357 |
+
 ## Evaluation
 
 ```bash
