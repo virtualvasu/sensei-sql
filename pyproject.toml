@@ -29,7 +29,9 @@ gpu = [
     "datasets>=3.0",
 ]
 app = [
-    "gradio>=5",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
     "openai>=1.50",
 ]
 download = [
@@ -38,6 +40,7 @@ download = [
 ]
 dev = [
     "pytest>=8",
+    "httpx>=0.27",
     # required by third_party/test-suite-sql-eval (scoring in #3)
     "nltk",
     "sqlparse",

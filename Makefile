@@ -9,7 +9,7 @@ TORCH_INDEX := https://download.pytorch.org/whl/cu128
 include .env
 export
 
-.PHONY: venv install install-app download check test teacher train results app
+.PHONY: venv install install-app download check test teacher train results app frontend frontend-data
 
 venv:
 	python3 -m venv $(VENV)
@@ -41,5 +41,12 @@ results:            # tables, plots, ablations, error analysis (#6)
 	$(PY) -m sensei_sql.eval.aggregate
 	$(PY) -m sensei_sql.eval.analysis
 
-app:                # offline NL-to-SQL app (#7); backend in configs/app.yaml
+frontend-data:      # numbers for the app's Results page -> frontend/src/content/results.json
+	$(PY) scripts/export_results.py
+
+frontend:           # build the React app (needs node >= 20); the python server serves frontend/dist
+	cd frontend && npm ci && npm run build
+
+app:                # offline NL-to-SQL web app (#7); backend in configs/app.yaml
+	@test -f frontend/dist/index.html || $(MAKE) frontend
 	$(PY) -m sensei_sql.app

@@ -224,23 +224,33 @@ the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).
 ## App: offline natural-language-to-SQL
 
 ```bash
-make app                                          # backend from configs/app.yaml (default: vLLM, GPU)
+make app                                          # backend from configs/app.yaml (default: vLLM, GPU); builds the frontend on first use
 python -m sensei_sql.app --backend transformers   # GPU or CPU, no extra deps
 python -m sensei_sql.app --backend llama-server   # CPU, GGUF (needs the GGUF export)
 ollama create sensei-sql -f Modelfile             # once: import the Q4_K_M GGUF into a local Ollama
 python -m sensei_sql.app --backend ollama         # then use it
 ```
 
-Opens a Gradio page on http://127.0.0.1:7860 (local only, `share=False`). Pick one of the Spider
-databases or upload your own `.sqlite` file, type a question, and the app shows the generated SQL (editable,
-with a Run button), the result table, the schema and timings. It runs entirely offline from `models/student-merged`
-(the offline flags from `.env` are set, Gradio analytics are off). Queries run through the same safe runner as
-the evaluation: read-only connection, `SELECT`/`WITH` only (an edited `DELETE` is rejected), a timeout and
-a row cap. If a generated query fails to execute, the error is shown to the model once for a corrected attempt
-(`self_correct` in `configs/app.yaml`).
+A React app (Vite, TypeScript, Tailwind, shadcn/ui, Recharts; source in [frontend/](frontend/README.md)) served by a
+small FastAPI server (`src/sensei_sql/app/api.py`) on http://127.0.0.1:7860 (local only; `host` in `configs/app.yaml`).
+Building the frontend needs node ≥ 20 once (`make frontend`); after that everything is bundled and runs offline.
 
-Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), the transformers backend on CPU,
-llama-server with the Q4_K_M GGUF, and Ollama with the same GGUF (4 questions, all correct and executable). Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
+- **Assistant** (`/`): pick one of the Spider databases or upload your own `.sqlite` file, ask a question, and get the
+  generated SQL (editable, with a Run button), the result table, the schema, timings and a session history. Queries run
+  through the same safe runner as the evaluation: read-only connection, `SELECT`/`WITH` only (an edited `DELETE` is
+  rejected), a timeout and a row cap. If a generated query fails to execute, the error is shown to the model once for a
+  corrected attempt (`self_correct` in `configs/app.yaml`).
+- **Results** (`/results`): the project's numbers with charts: headline figures, the model comparison table,
+  accuracy vs latency, accuracy by hardness, both ablations, CPU results, training curves, the teacher-data filter chain
+  and the error analysis. Tabs are linkable (`/results?tab=cpu`). The data comes from `frontend/src/content/results.json`
+  (`make frontend-data` regenerates it from the evaluation outputs).
+
+Checked with the final student: vLLM on the GPU (~0.2–0.7 s per question), the transformers backend on CPU, llama-server
+with the Q4_K_M GGUF, and Ollama with the same GGUF (4 questions, all correct and executable); the web page was driven
+end to end in headless Chrome. Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
+
+Frontend development with hot reload: run the python app, then `cd frontend && npm install && npm run dev`
+(http://127.0.0.1:5173, proxies `/api` to the python server).
 
 ## Report material
 

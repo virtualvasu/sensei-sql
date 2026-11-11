@@ -90,15 +90,64 @@ def test_upload(assistant, tmp_path):
         check_sqlite(tmp_path / "missing.sqlite")
 
 
-def test_ui_builds(assistant):
-    pytest.importorskip("gradio")
-    from sensei_sql.app.ui import build_ui, status_markdown
+@pytest.fixture
+def client(assistant, tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
 
-    demo = build_ui(assistant([]))
-    assert demo is not None
-    from sensei_sql.core.executor import ExecResult
+    from sensei_sql.app.api import create_app
 
-    assert "no rows" in status_markdown("empty", ExecResult(ok=True))
+    def make(outputs, **kw):
+        return TestClient(create_app(assistant(outputs, **kw), dist=tmp_path / "no-dist"))
+
+    return make
+
+
+def test_api_ask_and_run(client):
+    c = client(["SELECT count(*) FROM animal;"])
+    assert c.get("/api/health").json()["backend"] == "base"
+    assert c.get("/api/databases").json() == {"databases": [{"name": "tiny", "upload": False}], "default": "tiny"}
+    assert "CREATE TABLE animal" in c.get("/api/schema", params={"db": "tiny"}).json()["schema"]
+    r = c.post("/api/ask", json={"db": "tiny", "question": "How many animals?"}).json()
+    assert r["status"] == "ok" and r["rows"] == [[20]] and r["row_count"] == 1
+    assert r["sql"] == "SELECT count(*) FROM animal" and r["gen_ms"] >= 0 and r["exec_ms"] >= 0
+    bad = c.post("/api/run", json={"db": "tiny", "sql": "DELETE FROM animal"}).json()
+    assert bad["status"] == "rejected" and bad["rows"] == []
+    ok = c.post("/api/run", json={"db": "tiny", "sql": "SELECT weight FROM animal ORDER BY weight LIMIT 2"}).json()
+    assert ok["status"] == "ok" and ok["columns"] == ["weight"] and len(ok["rows"]) == 2
+
+
+def test_api_errors_and_upload(client, tmp_path):
+    c = client([])
+    assert c.get("/api/schema", params={"db": "nope"}).status_code == 404
+    assert c.post("/api/ask", json={"db": "tiny", "question": "  "}).status_code == 400
+    assert c.get("/api/does-not-exist").status_code == 404
+    db = tmp_path / "shop.db"
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE item (id INT)")
+    con.commit()
+    con.close()
+    r = c.post("/api/upload", files={"file": ("shop.db", db.read_bytes())})
+    assert r.status_code == 200 and r.json() == {"name": "upload_shop"}
+    assert {"name": "upload_shop", "upload": True} in c.get("/api/databases").json()["databases"]
+    assert c.post("/api/upload", files={"file": ("bad.sqlite", b"not a database")}).status_code == 400
+
+
+def test_api_serves_built_frontend(assistant, tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from sensei_sql.app.api import create_app
+
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<html>app</html>")
+    (dist / "assets" / "x.js").write_text("1")
+    c = TestClient(create_app(assistant([]), dist=dist))
+    assert c.get("/").text == "<html>app</html>"
+    assert c.get("/results").text == "<html>app</html>"  # client-side route falls back to index.html
+    assert c.get("/assets/x.js").text == "1"
+    assert c.get("/../../etc/passwd").text == "<html>app</html>"
 
 
 @requires_spider

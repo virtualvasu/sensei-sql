@@ -25,8 +25,8 @@ def main() -> None:
     ap.add_argument("--port", type=int)
     args = ap.parse_args()
 
-    # Never phone home (Gradio analytics / update checks, HF hub).
-    for var, val in {"GRADIO_ANALYTICS_ENABLED": "False", "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}.items():
+    # Never phone home (HF hub).
+    for var, val in {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}.items():
         os.environ.setdefault(var, val)
 
     cfg = yaml.safe_load(args.config.read_text())
@@ -35,7 +35,7 @@ def main() -> None:
 
     from sensei_sql.app.backends import make_backend
     from sensei_sql.app.service import SQLAssistant
-    from sensei_sql.app.ui import build_ui
+    from sensei_sql.app.api import create_app
 
     # Turn SIGTERM into a normal exit so the backend is closed (a vLLM engine process would
     # otherwise outlive the app and keep holding the GPU).
@@ -43,9 +43,11 @@ def main() -> None:
 
     backend = make_backend(cfg)
     assistant = SQLAssistant(backend, timeout_s=cfg["exec_timeout_s"], max_rows=cfg["max_rows"], self_correct=cfg["self_correct"])
-    demo = build_ui(assistant, title=cfg.get("title", "sensei-sql"))
+    app = create_app(assistant, title=cfg.get("title", "sensei-sql"))
     try:
-        demo.launch(server_name=cfg.get("host", "127.0.0.1"), server_port=args.port or cfg.get("port", 7860), share=False)
+        import uvicorn
+
+        uvicorn.run(app, host=cfg.get("host", "127.0.0.1"), port=args.port or cfg.get("port", 7860), log_level="warning")
     finally:
         backend.close()
 

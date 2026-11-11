@@ -14,6 +14,10 @@ __pycache__/
 build/
 dist/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
 # Caches / local env
 .cache/
 .env.local
