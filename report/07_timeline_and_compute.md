@@ -30,7 +30,9 @@ issue's code written while they ran.
 | Full dev evaluation of one student (accuracy + latency + throughput) | ~5–6 min |
 | Merge + verify + merged eval | ~10 min |
 | GGUF conversion + quantisation | ~1 min |
-| CPU evaluations (100 questions) | 2–10 min each |
+| CPU evaluations (100 questions): student | 2–10 min each |
+| Teacher GGUF conversion + quantisation (llama.cpp) | ~5 min |
+| CPU evaluations (100 questions): teacher Q4_K_M / Q8_0 | 18 / 25 min |
 
 Training time totals about 21 h for the seven runs. All in all roughly 30 GPU-hours, of which data
 generation and training are almost all.

@@ -214,8 +214,9 @@ Without fine-tuning the student scores 0.672.
 Teacher-generated data matches or beats human labels; more of it keeps helping the teacher-only variant, while
 human + teacher is flat within noise (±1.3 points standard error). 99% of the best student's failures are
 valid SQL that answers a slightly different question; the most common are wrong table/column (34%), wrong
-join (19%) and wrong condition (17%). On a CPU (i9-14900K, 100 questions) the Q4_K_M GGUF answers in 0.67 s p50 at 0.92 GiB (fp32 transformers: 6.0 s), for
-0.77 EX against 0.83 for fp32 on that subset.
+join (19%) and wrong condition (17%). On a CPU (i9-14900K, 100 questions, llama.cpp, Q4_K_M) the student answers in 0.67 s p50 at 0.92 GiB; the
+teacher needs 9.9 s at 5.4 GiB, so the student is 14.6× faster and 5.8× smaller on CPU too. Accuracy on that
+subset: student 0.77, teacher 0.84 (fp32 student: 0.83, 6.0 s).
 
 The full tables, plots, error analysis and per-question examples are in [docs/results/](docs/results/results.md);
 the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).

@@ -9,3 +9,5 @@ Student (c) human + teacher,1034,0.7718,0.9234,0.8072,0.7069,0.5181,235.0,622.86
 "student-Q4_K_M on CPU (llama-server, n=100)",100,0.77,0.9167,0.8,0.7619,0.5882,674.52,4857.4,,0.0,0.92,"CPU: Intel(R) Core(TM) i9-14900K, 32 threads",,
 "student-Q8_0 on CPU (llama-server, n=100)",100,0.8,1.0,0.84,0.7143,0.6471,1238.33,5085.67,,0.0,1.53,"CPU: Intel(R) Core(TM) i9-14900K, 32 threads",,
 "student-merged-fp32 on CPU (transformers, n=100)",100,0.83,1.0,0.84,0.8095,0.7059,5984.03,10623.0,,0.0,2.89,"CPU: Intel(R) Core(TM) i9-14900K, 32 threads",,
+"teacher-Q4_K_M on CPU (llama-server, n=100)",100,0.84,1.0,0.88,0.9048,0.5294,9861.38,18797.98,,0.0,5.38,"CPU: Intel(R) Core(TM) i9-14900K, 32 threads",,
+"teacher-Q8_0 on CPU (llama-server, n=100)",100,0.84,1.0,0.88,0.8571,0.5882,13669.71,23461.99,,0.0,9.11,"CPU: Intel(R) Core(TM) i9-14900K, 32 threads",,

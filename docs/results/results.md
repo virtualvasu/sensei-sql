@@ -14,6 +14,8 @@
 | student-Q4_K_M on CPU (llama-server, n=100) | 100 | 0.770 | 0.917 | 0.800 | 0.762 | 0.588 | 675 | 4857 | – | 0.00 | 0.92 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
 | student-Q8_0 on CPU (llama-server, n=100) | 100 | 0.800 | 1.000 | 0.840 | 0.714 | 0.647 | 1238 | 5086 | – | 0.00 | 1.53 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
 | student-merged-fp32 on CPU (transformers, n=100) | 100 | 0.830 | 1.000 | 0.840 | 0.809 | 0.706 | 5984 | 10623 | – | 0.00 | 2.89 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
+| teacher-Q4_K_M on CPU (llama-server, n=100) | 100 | 0.840 | 1.000 | 0.880 | 0.905 | 0.529 | 9861 | 18798 | – | 0.00 | 5.38 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
+| teacher-Q8_0 on CPU (llama-server, n=100) | 100 | 0.840 | 1.000 | 0.880 | 0.857 | 0.588 | 13670 | 23462 | – | 0.00 | 9.11 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
 
 
 ![accuracy vs latency](accuracy_vs_latency.png)

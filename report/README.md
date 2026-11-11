@@ -12,7 +12,8 @@ confirmed correct (self-consistency or agreement with Spider's gold SQL) are kep
 On the Spider dev set (1,034 questions, official execution-accuracy scorer) the best student scores
 **0.773 vs the teacher's 0.782** (98.8% of its accuracy; the untuned student scores 0.672), while being
 4.6× faster, 10.6× higher throughput, 2.4× less GPU memory and 4.5× smaller. A 4-bit GGUF version
-(0.9 GiB) answers in 0.67 s median on a CPU, and the whole thing runs as an offline web app.
+(0.9 GiB) answers in 0.67 s median on a CPU, 14.6× faster than the teacher in the same format (9.9 s), and the
+whole thing runs as an offline web app.
 
 ## Contents
 
@@ -37,7 +38,7 @@ On the Spider dev set (1,034 questions, official execution-accuracy scorer) the 
 
 | File | Content |
 |---|---|
-| `eval_all_runs.csv` | One row per evaluated model: accuracy overall and per hardness, latency p50/p95/mean, throughput, VRAM, size (11 GPU runs + 3 CPU runs) |
+| `eval_all_runs.csv` | One row per evaluated model: accuracy overall and per hardness, latency p50/p95/mean, throughput, VRAM, size (11 GPU runs + 5 CPU runs) |
 | `main_results.csv` | The main results table as generated for the repository |
 | `ablation_data_source.csv`, `ablation_data_size.csv` | The two ablation tables |
 | `error_categories.csv` | Failure categories for the 100 sampled errors |

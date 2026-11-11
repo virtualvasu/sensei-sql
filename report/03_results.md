@@ -42,17 +42,29 @@ matches the teacher (0.512 vs 0.488, within noise).
 The first 100 questions are easier than average, so these accuracies are comparable with each other only,
 not with the full-dev numbers above.
 
-| format | runtime | size GiB | p50 | p95 | mean | EX (n=100) |
-|---|---|---|---|---|---|---|
-| fp32 | transformers | 2.89 | 5.98 s | 10.6 s | 5.95 s | 0.83 |
-| GGUF Q8_0 | llama.cpp | 1.53 | 1.24 s | 5.09 s | 1.84 s | 0.80 |
-| GGUF Q4_K_M | llama.cpp | 0.92 | 0.67 s | 4.86 s | 1.18 s | 0.77 |
+| model | format | runtime | size GiB | p50 | p95 | mean | EX (n=100) |
+|---|---|---|---|---|---|---|---|
+| student | fp32 | transformers | 2.89 | 5.98 s | 10.6 s | 5.95 s | 0.83 |
+| student | GGUF Q8_0 | llama.cpp | 1.53 | 1.24 s | 5.09 s | 1.84 s | 0.80 |
+| student | GGUF Q4_K_M | llama.cpp | 0.92 | 0.67 s | 4.86 s | 1.18 s | 0.77 |
+| teacher | GGUF Q8_0 | llama.cpp | 9.11 | 13.7 s | 23.5 s | 14.9 s | 0.84 |
+| teacher | GGUF Q4_K_M | llama.cpp | 5.38 | 9.86 s | 18.8 s | 10.6 s | 0.84 |
 
-Q4_K_M is 8.9× faster than fp32 and 3× smaller than fp16 weights; the 6-point accuracy difference on 100
-questions is about 1.5 standard errors (suggestive, not conclusive). Quantised models often write the same
-SQL with different case or quote style, so text identity is a poor test: against the fp32 model only 47 (Q8_0)
-and 29 (Q4_K_M) of 100 outputs are textually identical, while correctness agreed on 91 and 86.
-The teacher was not run on CPU.
+Same machine, same runtime, same quantisation: the student is **14.6× faster than the teacher at Q4_K_M and 11×
+faster at Q8_0**, and 5.8× smaller. The student's Q4_K_M is also 8.9× faster than its own fp32 version, and 3×
+smaller than fp16 weights.
+
+Accuracy on these 100 questions: the teacher scores 0.84 in both formats; the student 0.80 (Q8_0) and 0.77
+(Q4_K_M), which is 95% and 92% of the teacher. That is a larger gap than on the full dev set (0.773 vs 0.782 on
+the GPU). The standard error at n=100 is about ±4 points, so the difference is 1.5 to 2 standard errors; it may be
+partly noise and partly the cost of 4/8-bit quantisation for the small model, which this experiment does not
+separate. Per-hardness figures at n=100 (about 20 questions for extra-hard) are too small to interpret.
+The teacher GGUF was converted by llama.cpp from the FP8 checkpoint (dequantised, then quantised again), so it is
+not exactly the model used in the GPU runs. The teacher was run with thinking disabled, as on the GPU.
+
+Quantised models often write the same SQL with different case or quote style, so text identity is a poor test:
+against the fp32 student only 47 (Q8_0) and 29 (Q4_K_M) of 100 outputs are textually identical, while correctness
+agreed on 91 and 86 questions.
 
 ## 3.5 Export check
 Merged fp16 vs adapter+base, first 50 dev questions, greedy: 49 of 50 identical SQL (47 of 50 in an earlier

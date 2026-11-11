@@ -55,4 +55,5 @@
 - Random-order batching for training: too slow (see above).
 - Interrupted ablation run (combined, 25% teacher) was stopped at step 1,370 and rerun from scratch, because it
   had saved no adapter (only checkpoints).
-- Teacher on CPU and multiple training seeds were considered and not done (see 09).
+- Multiple training seeds were considered and not done (see 09). The teacher on CPU was done late, via a llama.cpp
+  GGUF conversion of the FP8 checkpoint, after first checking that llama.cpp supports the Qwen3.5 architecture.

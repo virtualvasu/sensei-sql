@@ -49,21 +49,26 @@ All on an Intel i9-14900K (32 threads), no GPU, batch size 1, on the first 100 d
 100 questions are easier than average (the fp32 model scores 0.83 on them against 0.773 on the full
 set), so the accuracies below are only comparable with each other.
 
-| format | runtime | size | p50 | p95 | EX (n=100) |
-|---|---|---|---|---|---|
-| fp32 | transformers | 2.9 GiB | 5.98 s | 10.6 s | 0.83 |
-| GGUF Q8_0 | llama.cpp | 1.5 GiB | 1.24 s | 5.1 s | 0.80 |
-| **GGUF Q4_K_M** | llama.cpp | **0.9 GiB** | **0.67 s** | 4.9 s | 0.77 |
+| model | format | runtime | size | p50 | p95 | EX (n=100) |
+|---|---|---|---|---|---|---|
+| student | fp32 | transformers | 2.9 GiB | 5.98 s | 10.6 s | 0.83 |
+| student | GGUF Q8_0 | llama.cpp | 1.5 GiB | 1.24 s | 5.1 s | 0.80 |
+| **student** | **GGUF Q4_K_M** | llama.cpp | **0.9 GiB** | **0.67 s** | 4.9 s | 0.77 |
+| teacher | GGUF Q8_0 | llama.cpp | 9.1 GiB | 13.7 s | 23.5 s | 0.84 |
+| teacher | GGUF Q4_K_M | llama.cpp | 5.4 GiB | 9.9 s | 18.8 s | 0.84 |
 
-The Q4_K_M model answers in under a second at the median on a CPU, 8.9× faster than fp32 and 3× smaller
-than fp16 weights, and loses 6 points on this subset (about 1.5 standard errors at n=100, so
-suggestive rather than conclusive). Quantised output often differs from the fp16 model only in
-identifier case or quote style (`"France"` vs `'France'`), but it is not always equivalent: on
-50 questions only 30 (Q8_0) and 24 (Q4_K_M) outputs were textually identical to the adapter model, and
-on the 100-question subset correctness agreed with fp32 on 91 and 86 questions.
+On the same CPU and runtime the student is **14.6× faster than the teacher at Q4_K_M (0.67 s vs 9.9 s p50) and
+11× faster at Q8_0**, and 5.8× smaller (0.9 vs 5.4 GiB). On these 100 questions the student scores 0.77 (Q4_K_M)
+and 0.80 (Q8_0) against the teacher's 0.84 for both, i.e. 92% and 95% of the teacher's accuracy, a larger gap than
+the 1-point gap on the full dev set with the GPU models. With n=100 the standard error is about ±4 points, so
+the difference is about 1.5 to 2 standard errors; it may be partly noise and partly the cost of aggressive
+quantisation for the small model, which is not separated here. The teacher GGUF was converted from the FP8
+checkpoint (llama.cpp dequantises it and then quantises again), so it is not the exact weights used for the GPU runs.
 
-The teacher was not run on CPU: a 9B model cannot be compared on this setup without a separate
-quantised build, so there is no CPU speed-up figure against the teacher.
+The 4-bit student answers in under a second at the median on a CPU, 3× smaller than fp16 weights. Quantised
+output often differs from the fp16 model only in identifier case or quote style (`"France"` vs `'France'`), but it
+is not always equivalent: on 50 questions only 30 (Q8_0) and 24 (Q4_K_M) outputs were textually identical to the
+adapter model, and on the 100-question subset correctness agreed with fp32 on 91 and 86 questions.
 
 ## Ablation 1: training data source
 
@@ -131,5 +136,5 @@ answer is a single `matches` column). Examples of each group are in `docs/result
 - One training seed per variant and a single benchmark (Spider dev), so small differences are noise.
 - Spider dev databases overlap in style with the training databases; the student has not been
   tested on unseen schema styles or on other benchmarks.
-- CPU numbers use 100 questions and one machine; there is no teacher-on-CPU comparison and no
-  laptop-class CPU measurement.
+- CPU numbers use 100 questions and one desktop-class machine; there is no laptop-class CPU measurement. The
+  teacher GGUF was re-quantised from the FP8 checkpoint, not from the original bf16 weights.
