@@ -65,7 +65,7 @@ def main_table(runs: list[tuple[dict, dict]], ref: dict | None) -> pd.DataFrame:
             "size GiB": eff.get("model_size_gib"),
             "device": eff.get("device", "GPU (RTX 4000 Ada)"),
         }
-        if ref:
+        if ref and row["n"] == ref["num_questions"]:  # CPU subset runs are not comparable to the full GPU teacher run
             ref_acc = ref["accuracy"]["exec_accuracy"]
             row["% of teacher EX"] = 100 * row["EX"] / ref_acc if ref_acc else None
             row["speed-up vs teacher (p50)"] = ref["efficiency"]["latency_ms_p50"] / row["p50 ms"]

@@ -45,12 +45,25 @@ questions it already matches the teacher, and on extra-hard it is slightly ahead
 
 ## CPU
 
-The merged student in fp32 with Hugging Face transformers on an Intel i9-14900K (32 threads) answers
-in **6.0 s p50 / 10.6 s p95** per query (first 100 dev questions, EX 0.83 on that easier-than-average
-subset, which is not comparable to the full-dev numbers). This is an unoptimised baseline. The planned
-comparison with a quantised GGUF model under llama.cpp was not run (it needs a llama.cpp build that
-was not approved on this machine), and the teacher was not run on CPU: a 9B model in fp32/bf16 on
-CPU is impractical for this comparison.
+All on an Intel i9-14900K (32 threads), no GPU, batch size 1, on the first 100 dev questions. These
+100 questions are easier than average (the fp32 model scores 0.83 on them against 0.773 on the full
+set), so the accuracies below are only comparable with each other.
+
+| format | runtime | size | p50 | p95 | EX (n=100) |
+|---|---|---|---|---|---|
+| fp32 | transformers | 2.9 GiB | 5.98 s | 10.6 s | 0.83 |
+| GGUF Q8_0 | llama.cpp | 1.5 GiB | 1.24 s | 5.1 s | 0.80 |
+| **GGUF Q4_K_M** | llama.cpp | **0.9 GiB** | **0.67 s** | 4.9 s | 0.77 |
+
+The Q4_K_M model answers in under a second at the median on a CPU, 8.9× faster than fp32 and 3× smaller
+than fp16 weights, and loses 6 points on this subset (about 1.5 standard errors at n=100, so
+suggestive rather than conclusive). Quantised output often differs from the fp16 model only in
+identifier case or quote style (`"France"` vs `'France'`), but it is not always equivalent: on
+50 questions only 30 (Q8_0) and 24 (Q4_K_M) outputs were textually identical to the adapter model, and
+on the 100-question subset correctness agreed with fp32 on 91 and 86 questions.
+
+The teacher was not run on CPU: a 9B model cannot be compared on this setup without a separate
+quantised build, so there is no CPU speed-up figure against the teacher.
 
 ## Ablation 1: training data source
 
@@ -118,5 +131,5 @@ answer is a single `matches` column). Examples of each group are in `docs/result
 - One training seed per variant and a single benchmark (Spider dev), so small differences are noise.
 - Spider dev databases overlap in style with the training databases; the student has not been
   tested on unseen schema styles or on other benchmarks.
-- The CPU result is an unquantised transformers baseline on 100 questions; there is no GGUF/llama.cpp
-  measurement and no teacher-on-CPU comparison.
+- CPU numbers use 100 questions and one machine; there is no teacher-on-CPU comparison and no
+  laptop-class CPU measurement.

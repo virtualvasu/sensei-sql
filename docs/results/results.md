@@ -11,7 +11,9 @@
 | Student (b) teacher-only | 1034 | 0.769 | 0.911 | 0.834 | 0.713 | 0.440 | 244 | 583 | 42.44 | 7.20 | 2.97 | GPU (RTX 4000 Ada) | 98.3 | 3.9 |
 | Student (c) human + teacher | 1034 | 0.772 | 0.923 | 0.807 | 0.707 | 0.518 | 235 | 623 | 38.95 | 7.20 | 2.97 | GPU (RTX 4000 Ada) | 98.6 | 4.0 |
 | Best student, merged fp16 (GPU) | 1034 | 0.773 | 0.919 | 0.812 | 0.713 | 0.512 | 206 | 550 | 44.08 | 6.52 | 2.89 | GPU (RTX 4000 Ada) | 98.8 | 4.6 |
-| student-merged-fp32 on CPU (transformers, n=100) | 100 | 0.830 | 1.000 | 0.840 | 0.809 | 0.706 | 5984 | 10623 | – | 0.00 | 2.89 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | 106.1 | 0.2 |
+| student-Q4_K_M on CPU (llama-server, n=100) | 100 | 0.770 | 0.917 | 0.800 | 0.762 | 0.588 | 675 | 4857 | – | 0.00 | 0.92 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
+| student-Q8_0 on CPU (llama-server, n=100) | 100 | 0.800 | 1.000 | 0.840 | 0.714 | 0.647 | 1238 | 5086 | – | 0.00 | 1.53 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
+| student-merged-fp32 on CPU (transformers, n=100) | 100 | 0.830 | 1.000 | 0.840 | 0.809 | 0.706 | 5984 | 10623 | – | 0.00 | 2.89 | CPU: Intel(R) Core(TM) i9-14900K, 32 threads | – | – |
 
 
 ![accuracy vs latency](accuracy_vs_latency.png)

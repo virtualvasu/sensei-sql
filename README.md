@@ -188,7 +188,10 @@ and the app and later evaluations use that model. `verify` regenerates the first
 merged outputs are identical to adapter+base; the 3 that differ only in identifier case or
 spacing and give the same execution result (fp16 merge vs bf16 LoRA rounding). Results are in
 `outputs/export/verify.json`. `gguf` converts the merged model to f16/Q8_0/Q4_K_M GGUF for llama.cpp or
-Ollama, using `third_party/llama.cpp`, which must be cloned and built separately (`cmake -B build && cmake --build build`).
+Ollama, using `third_party/llama.cpp`, which must be cloned and built first:
+`cd third_party/llama.cpp && cmake -B build -DGGML_CUDA=OFF -DLLAMA_CURL=OFF && cmake --build build -j --target llama-quantize llama-server llama-cli`.
+`verify --gguf` also compares each GGUF with the adapter model; the outputs often differ only in case or quote style, so
+judge them by accuracy (`python -m sensei_sql.eval.cpu --backend llama-server --gguf models/student-gguf/student-Q4_K_M.gguf`).
 
 ## Results
 
@@ -211,7 +214,8 @@ Without fine-tuning the student scores 0.672.
 Teacher-generated data matches or beats human labels; more of it keeps helping the teacher-only variant, while
 human + teacher is flat within noise (±1.3 points standard error). 99% of the best student's failures are
 valid SQL that answers a slightly different question; the most common are wrong table/column (34%), wrong
-join (19%) and wrong condition (17%). On CPU (fp32, transformers, i9-14900K) it takes 6.0 s p50 per query.
+join (19%) and wrong condition (17%). On a CPU (i9-14900K, 100 questions) the Q4_K_M GGUF answers in 0.67 s p50 at 0.92 GiB (fp32 transformers: 6.0 s), for
+0.77 EX against 0.83 for fp32 on that subset.
 
 The full tables, plots, error analysis and per-question examples are in [docs/results/](docs/results/results.md);
 the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).
@@ -233,6 +237,5 @@ the evaluation: read-only connection, `SELECT`/`WITH` only (an edited `DELETE` i
 a row cap. If a generated query fails to execute, the error is shown to the model once for a corrected attempt
 (`self_correct` in `configs/app.yaml`).
 
-Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), and the transformers backend
-on CPU only. The llama-server and Ollama backends are implemented but untested, because they need the GGUF
-export (see above). Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
+Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), the transformers backend on CPU,
+and llama-server with the Q4_K_M GGUF. The Ollama backend is implemented but untested. Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
