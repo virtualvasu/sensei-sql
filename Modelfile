@@ -1,0 +1,14 @@
+# ollama create sensei-sql -f Modelfile      (run from the repo root, after `export gguf`)
+FROM ./models/student-gguf/student-Q4_K_M.gguf
+
+TEMPLATE """{{- if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}
+{{- range .Messages }}<|im_start|>{{ .Role }}
+{{ .Content }}<|im_end|>
+{{ end }}<|im_start|>assistant
+"""
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|im_start|>"
+PARAMETER temperature 0
+PARAMETER num_ctx 8192

@@ -226,7 +226,8 @@ the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).
 make app                                          # backend from configs/app.yaml (default: vLLM, GPU)
 python -m sensei_sql.app --backend transformers   # GPU or CPU, no extra deps
 python -m sensei_sql.app --backend llama-server   # CPU, GGUF (needs the GGUF export)
-python -m sensei_sql.app --backend ollama         # a local Ollama with the GGUF imported
+ollama create sensei-sql -f Modelfile             # once: import the Q4_K_M GGUF into a local Ollama
+python -m sensei_sql.app --backend ollama         # then use it
 ```
 
 Opens a Gradio page on http://127.0.0.1:7860 (local only, `share=False`). Pick one of the Spider
@@ -238,4 +239,4 @@ a row cap. If a generated query fails to execute, the error is shown to the mode
 (`self_correct` in `configs/app.yaml`).
 
 Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), the transformers backend on CPU,
-and llama-server with the Q4_K_M GGUF. The Ollama backend is implemented but untested. Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
+llama-server with the Q4_K_M GGUF, and Ollama with the same GGUF (4 questions, all correct and executable). Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.

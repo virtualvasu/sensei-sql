@@ -18,7 +18,7 @@ llama-server:          # CPU, GGUF from #5 (needs third_party/llama.cpp built)
   gguf: models/student-gguf/student-Q4_K_M.gguf
   threads: null        # default: all cores
 
-ollama:                # a local Ollama with the GGUF imported (ollama create sensei-sql -f Modelfile)
+ollama:                # a local Ollama with the GGUF imported (ollama create sensei-sql -f Modelfile, from the repo root)
   model: sensei-sql
   url: http://127.0.0.1:11434
 
