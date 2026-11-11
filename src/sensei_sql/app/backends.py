@@ -73,6 +73,15 @@ class VLLMBackend(Backend):
         )
         return out[0].outputs[0].text
 
+    def close(self) -> None:
+        import gc
+
+        engine = getattr(getattr(self._llm, "llm_engine", None), "engine_core", None)
+        if hasattr(engine, "shutdown"):
+            engine.shutdown()  # stop the EngineCore process so it does not keep the GPU memory
+        del self._llm
+        gc.collect()
+
 
 class TransformersBackend(Backend):
     name = "transformers"

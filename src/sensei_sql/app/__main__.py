@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
+import sys
 from pathlib import Path
 
 import yaml
@@ -34,6 +36,10 @@ def main() -> None:
     from sensei_sql.app.backends import make_backend
     from sensei_sql.app.service import SQLAssistant
     from sensei_sql.app.ui import build_ui
+
+    # Turn SIGTERM into a normal exit so the backend is closed (a vLLM engine process would
+    # otherwise outlive the app and keep holding the GPU).
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 
     backend = make_backend(cfg)
     assistant = SQLAssistant(backend, timeout_s=cfg["exec_timeout_s"], max_rows=cfg["max_rows"], self_correct=cfg["self_correct"])

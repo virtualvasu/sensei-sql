@@ -215,3 +215,24 @@ join (19%) and wrong condition (17%). On CPU (fp32, transformers, i9-14900K) it 
 
 The full tables, plots, error analysis and per-question examples are in [docs/results/](docs/results/results.md);
 the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).
+
+## App: offline natural-language-to-SQL
+
+```bash
+make app                                          # backend from configs/app.yaml (default: vLLM, GPU)
+python -m sensei_sql.app --backend transformers   # GPU or CPU, no extra deps
+python -m sensei_sql.app --backend llama-server   # CPU, GGUF (needs the GGUF export)
+python -m sensei_sql.app --backend ollama         # a local Ollama with the GGUF imported
+```
+
+Opens a Gradio page on http://127.0.0.1:7860 (local only, `share=False`). Pick one of the Spider
+databases or upload your own `.sqlite` file, type a question, and the app shows the generated SQL (editable,
+with a Run button), the result table, the schema and timings. It runs entirely offline from `models/student-merged`
+(the offline flags from `.env` are set, Gradio analytics are off). Queries run through the same safe runner as
+the evaluation: read-only connection, `SELECT`/`WITH` only (an edited `DELETE` is rejected), a timeout and
+a row cap. If a generated query fails to execute, the error is shown to the model once for a corrected attempt
+(`self_correct` in `configs/app.yaml`).
+
+Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), and the transformers backend
+on CPU only. The llama-server and Ollama backends are implemented but untested, because they need the GGUF
+export (see above). Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
