@@ -44,6 +44,7 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=100)
     ap.add_argument("--split", default="dev")
     ap.add_argument("--run")
+    ap.add_argument("--no-think", action="store_true", help="llama-server: disable the model's thinking mode (Qwen3.5 teacher)")
     args = ap.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ""  # make sure nothing lands on the GPU
@@ -53,7 +54,10 @@ def main() -> None:
 
     torch.set_num_threads(args.threads)
     if args.backend == "llama-server":
-        backend = LlamaServerBackend.launch(args.gguf, threads=args.threads)
+        backend = LlamaServerBackend.launch(
+            args.gguf, threads=args.threads,
+            extra_args=("--chat-template-kwargs", '{"enable_thinking": false}') if args.no_think else (),
+        )
         model_name, size = args.gguf.stem, args.gguf.stat().st_size / 2**30
     else:
         backend = TransformersBackend(str(args.model_dir), device="cpu")

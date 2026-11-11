@@ -129,7 +129,7 @@ class LlamaServerBackend(Backend):
         self._process = process
 
     @classmethod
-    def launch(cls, gguf: Path, threads: int | None = None, ctx: int = 8192) -> "LlamaServerBackend":
+    def launch(cls, gguf: Path, threads: int | None = None, ctx: int = 8192, extra_args: tuple[str, ...] = ()) -> "LlamaServerBackend":
         if not cls.BINARY.exists():
             raise FileNotFoundError(f"{cls.BINARY} not found: build llama.cpp first (see README)")
         with socket.socket() as s:
@@ -138,6 +138,7 @@ class LlamaServerBackend(Backend):
         cmd = [str(cls.BINARY), "-m", str(gguf), "--host", "127.0.0.1", "--port", str(port), "-c", str(ctx)]
         if threads:
             cmd += ["-t", str(threads)]
+        cmd += list(extra_args)
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         url = f"http://127.0.0.1:{port}"
         for _ in range(600):
