@@ -1,0 +1,8 @@
+category,count,share (%)
+syntax/execution error,1,1.0
+wrong table/column,34,34.0
+nesting error,15,15.0
+wrong join,19,19.0
+wrong aggregation/grouping,12,12.0
+wrong condition,17,17.0
+other (ordering/limit/select),2,2.0

@@ -1,0 +1,5 @@
+model,EX,easy,medium,hard,extra
+"Student Qwen2.5-Coder-1.5B, no fine-tuning",0.6721,0.8669,0.7287,0.5115,0.3976
+Student (a) human-only,0.7553,0.9073,0.8117,0.6322,0.506
+Student (b) teacher-only,0.7689,0.9113,0.8341,0.7126,0.4398
+Student (c) human + teacher,0.7718,0.9234,0.8072,0.7069,0.5181

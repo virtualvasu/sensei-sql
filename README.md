@@ -189,3 +189,29 @@ merged outputs are identical to adapter+base; the 3 that differ only in identifi
 spacing and give the same execution result (fp16 merge vs bf16 LoRA rounding). Results are in
 `outputs/export/verify.json`. `gguf` converts the merged model to f16/Q8_0/Q4_K_M GGUF for llama.cpp or
 Ollama, using `third_party/llama.cpp`, which must be cloned and built separately (`cmake -B build && cmake --build build`).
+
+## Results
+
+```bash
+make results     # aggregate + analysis -> outputs/results/ (tables, plots, error analysis)
+```
+
+On Spider dev (1,034 questions, execution accuracy) the distilled student reaches **0.773 EX against the
+teacher's 0.782, 98.8% of its accuracy**. It is 4.6× faster at batch size 1 (206 vs 945 ms p50) with 10.6×
+the throughput, needs 6.5 instead of 15.5 GiB of VRAM and is 4.5× smaller on disk (2.9 vs 13.1 GiB).
+Without fine-tuning the student scores 0.672.
+
+| training data | EX | | teacher pairs used | teacher-only | human + teacher |
+|---|---|---|---|---|---|
+| none | 0.672 | | 25% | 0.750 | 0.767 |
+| human only | 0.755 | | 50% | 0.760 | 0.759 |
+| teacher only | 0.769 | | 100% | 0.769 | 0.772 |
+| human + teacher | 0.772 | | | | |
+
+Teacher-generated data matches or beats human labels; more of it keeps helping the teacher-only variant, while
+human + teacher is flat within noise (±1.3 points standard error). 99% of the best student's failures are
+valid SQL that answers a slightly different question; the most common are wrong table/column (34%), wrong
+join (19%) and wrong condition (17%). On CPU (fp32, transformers, i9-14900K) it takes 6.0 s p50 per query.
+
+The full tables, plots, error analysis and per-question examples are in [docs/results/](docs/results/results.md);
+the write-up with caveats is [docs/results_draft.md](docs/results_draft.md).

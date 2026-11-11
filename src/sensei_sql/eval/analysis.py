@@ -160,12 +160,15 @@ def side_by_side(student: dict, teacher: dict, k: int, seed: int) -> dict[str, l
     rng = random.Random(seed)
     pairs = list(zip(student["predictions"], teacher["predictions"]))
     assert all(s["question"] == t["question"] for s, t in pairs), "runs must cover the same questions"
+    both = [p for p in pairs if p[0]["exec_match"] and p[1]["exec_match"]]
     groups = {
-        "student matches teacher (both correct)": [p for p in pairs if p[0]["exec_match"] and p[1]["exec_match"] and p[1]["hardness"] in ("hard", "extra")],
+        "student matches teacher (both correct)": both,
         "student beats teacher": [p for p in pairs if p[0]["exec_match"] and not p[1]["exec_match"]],
         "student fails, teacher correct": [p for p in pairs if not p[0]["exec_match"] and p[1]["exec_match"]],
     }
-    return {name: rng.sample(g, min(k, len(g))) for name, g in groups.items()} | {
+    # the examples shown for "both correct" are drawn from hard/extra questions (more informative)
+    pool = {**groups, "student matches teacher (both correct)": [p for p in both if p[1]["hardness"] in ("hard", "extra")]}
+    return {name: rng.sample(pool[name], min(k, len(pool[name]))) for name in groups} | {
         "_counts": {name: len(g) for name, g in groups.items()}
     }
 

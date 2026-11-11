@@ -1,0 +1,7 @@
+variant,teacher pairs used (%),EX,run
+(b) teacher-only,25,0.7495,student-teacher-teacher25pct-zeroshot-dev
+(b) teacher-only,50,0.7602,student-teacher-teacher50pct-zeroshot-dev
+(b) teacher-only,100,0.7689,student-teacher-zeroshot-dev
+(c) human + teacher,25,0.7669,student-combined-teacher25pct-zeroshot-dev
+(c) human + teacher,50,0.7592,student-combined-teacher50pct-zeroshot-dev
+(c) human + teacher,100,0.7718,student-combined-zeroshot-dev
