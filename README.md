@@ -240,3 +240,9 @@ a row cap. If a generated query fails to execute, the error is shown to the mode
 
 Checked with the merged student: vLLM on the GPU (~0.2–0.7 s per question), the transformers backend on CPU,
 llama-server with the Q4_K_M GGUF, and Ollama with the same GGUF (4 questions, all correct and executable). Stopping the app (Ctrl-C or SIGTERM) also stops the vLLM engine process.
+
+## Report material
+
+[report/](report/README.md) collects everything needed to write up the project: overview, methodology,
+all results and ablation tables, error analysis, the problems met and design decisions, timeline and compute,
+reproduction commands, limitations and references, plus the data tables, figures and samples behind them.
