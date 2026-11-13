@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, Clipboard, ClipboardCheck, History, Loader2, Play, Sparkles, Upload } from 'lucide-react'
+import { ChevronDown, Clipboard, ClipboardCheck, Database, Download, History, Loader2, MessageSquareText, Pencil, Play, Sparkles, Table2, Trash2, Upload } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { DatabasePicker } from '@/components/DatabasePicker'
 import { ResultTable } from '@/components/ResultTable'
+import { SqlView } from '@/components/SqlView'
 import { StatusBanner } from '@/components/StatusBanner'
 import { api, type DatabaseList, type Health, type QueryResult, type Status } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -32,6 +32,27 @@ const statusTone: Record<Status, string> = {
   no_sql: 'bg-destructive/10 text-destructive',
 }
 
+const tableNames = (schema: string) =>
+  [...schema.matchAll(/CREATE TABLE\s+[`"[]?([A-Za-z0-9_ ]+?)[`"\]]?\s*\(/gi)].map((m) => m[1])
+
+function downloadCsv(r: QueryResult) {
+  const esc = (v: unknown) => {
+    const t = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+  }
+  const csv = [r.columns.map(esc).join(','), ...r.rows.map((row) => row.map(esc).join(','))].join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'sensei-sql-result.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const Kbd = ({ children }: { children: React.ReactNode }) => (
+  <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{children}</kbd>
+)
+
 export default function Assistant() {
   const [health, setHealth] = useState<Health | null>(null)
   const [dbs, setDbs] = useState<DatabaseList['databases']>([])
@@ -46,6 +67,7 @@ export default function Assistant() {
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [copied, setCopied] = useState(false)
+  const [editing, setEditing] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const nextId = useRef(1)
 
@@ -84,6 +106,7 @@ export default function Assistant() {
       const r = await api.ask(db, q)
       setResult(r)
       setSql(r.sql)
+      setEditing(false)
       record({ db, question: q, sql: r.sql, status: r.status, rows: r.row_count })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -138,16 +161,22 @@ export default function Assistant() {
     }
   }
 
-  const tables = (schema.match(/CREATE TABLE/gi) ?? []).length
+  const names = tableNames(schema)
+  const tables = names.length || (schema.match(/CREATE TABLE/gi) ?? []).length
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Ask your database</h1>
-        <p className="text-sm text-muted-foreground">
-          Plain-English questions in, SQL out. A 1.5B model running {health ? <Badge variant="secondary">{health.backend}</Badge> : 'locally'}, fully offline; only read-only
-          SELECT queries are executed.
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-semibold tracking-tight">Ask your database</h1>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Type a question in plain English and get SQL back, plus the result. Runs entirely on your machine; only read-only SELECT queries are executed.
         </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">1.5B model</Badge>
+          {health && <Badge variant="secondary">{health.backend}</Badge>}
+          <Badge variant="secondary">fully offline</Badge>
+          {health?.self_correct && <Badge variant="secondary">auto-retry on SQL errors</Badge>}
+        </div>
       </div>
 
       {error && (
@@ -155,10 +184,12 @@ export default function Assistant() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <Card>
             <CardHeader>
-              <CardTitle>Database</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="size-4 text-muted-foreground" /> Database
+              </CardTitle>
               <CardDescription>The 166 Spider databases, or your own SQLite file.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -172,21 +203,32 @@ export default function Assistant() {
           </Card>
 
           <Card>
-            <Collapsible>
+            <Collapsible defaultOpen>
               <CardHeader>
                 <CollapsibleTrigger render={<button type="button" className="group flex w-full items-center justify-between text-left" />}>
                   <span>
-                    <CardTitle>Schema</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Table2 className="size-4 text-muted-foreground" /> Schema
+                    </CardTitle>
                     <CardDescription>{tables ? `${tables} table${tables === 1 ? '' : 's'}, as the model sees it` : 'Pick a database'}</CardDescription>
                   </span>
                   <ChevronDown className="size-4 text-muted-foreground transition-transform group-aria-expanded:rotate-180" />
                 </CollapsibleTrigger>
               </CardHeader>
               <CollapsibleContent>
-                <CardContent>
-                  <ScrollArea className="h-72 rounded-lg border bg-muted/40">
-                    <pre className="p-3 font-mono text-xs leading-relaxed">{schema}</pre>
-                  </ScrollArea>
+                <CardContent className="space-y-3">
+                  {names.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {names.map((n) => (
+                        <Badge key={n} variant="outline" className="font-mono">
+                          {n}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div className="h-64 overflow-auto rounded-lg border bg-muted/40">
+                    <pre className="w-max min-w-full p-3 font-mono text-xs leading-relaxed">{schema}</pre>
+                  </div>
                 </CardContent>
               </CollapsibleContent>
             </Collapsible>
@@ -196,38 +238,47 @@ export default function Assistant() {
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Question</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquareText className="size-4 text-muted-foreground" /> Your question
+              </CardTitle>
+              <CardDescription>{db ? <>Asking <span className="font-mono text-foreground">{db}</span></> : 'Pick a database first'}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <Textarea
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={onKey(() => ask())}
                 placeholder="e.g. How many singers are older than 30?"
-                rows={2}
-                className="resize-none text-base md:text-sm"
+                rows={3}
+                className="resize-none text-base md:text-base"
               />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={() => ask()} disabled={!db || !question.trim() || !!busy}>
-                  {busy === 'ask' ? <Loader2 className="animate-spin" /> : <Sparkles />} Ask
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Kbd>Ctrl / ⌘</Kbd> + <Kbd>Enter</Kbd> to ask
+                </span>
+                <Button size="lg" onClick={() => ask()} disabled={!db || !question.trim() || !!busy}>
+                  {busy === 'ask' ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate SQL
                 </Button>
-                <span className="text-xs text-muted-foreground">Ctrl/⌘ + Enter</span>
               </div>
               {examples.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {examples.map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => {
-                        setQuestion(ex)
-                        ask(ex)
-                      }}
-                      className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      {ex}
-                    </button>
-                  ))}
+                <div className="space-y-2 border-t pt-4">
+                  <p className="text-xs font-medium text-muted-foreground">Try one of these</p>
+                  <div className="flex flex-wrap gap-2">
+                    {examples.map((ex) => (
+                      <button
+                        key={ex}
+                        type="button"
+                        disabled={!!busy}
+                        onClick={() => {
+                          setQuestion(ex)
+                          ask(ex)
+                        }}
+                        className="rounded-full border bg-muted/30 px-3 py-1.5 text-left text-xs text-foreground/80 transition-colors hover:border-[var(--m-final)]/60 hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -243,46 +294,104 @@ export default function Assistant() {
             </Card>
           )}
 
-          {result && busy !== 'ask' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2">
-                  Generated SQL
-                  <span className="flex flex-wrap items-center gap-1.5 text-xs font-normal">
-                    {result.gen_ms !== null && <Badge variant="secondary">generation {Math.round(result.gen_ms)} ms</Badge>}
-                    <Badge variant="secondary">execution {Math.round(result.exec_ms)} ms</Badge>
-                  </span>
-                </CardTitle>
-                <CardDescription>Editable: change the query and run it again.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  value={sql}
-                  onChange={(e) => setSql(e.target.value)}
-                  onKeyDown={onKey(run)}
-                  spellCheck={false}
-                  rows={Math.min(10, Math.max(3, sql.split('\n').length + 1))}
-                  className="font-mono text-sm"
-                />
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" onClick={run} disabled={!sql.trim() || !!busy}>
-                    {busy === 'run' ? <Loader2 className="animate-spin" /> : <Play />} Run edited SQL
-                  </Button>
-                  <Button variant="ghost" onClick={copy}>
-                    {copied ? <ClipboardCheck /> : <Clipboard />} {copied ? 'Copied' : 'Copy'}
-                  </Button>
-                </div>
-                <StatusBanner result={result} />
-                <ResultTable result={result} />
+          {!result && busy !== 'ask' && (
+            <Card className="border-dashed bg-transparent">
+              <CardContent className="grid gap-4 py-2 sm:grid-cols-3">
+                {[
+                  ['1', 'Pick a database', 'Any Spider database, or upload your own SQLite file.'],
+                  ['2', 'Ask in plain English', 'Click a suggestion or type your own question.'],
+                  ['3', 'Review, edit, run', 'Inspect the SQL, tweak it, and export the result.'],
+                ].map(([n, title, text]) => (
+                  <div key={n} className="flex gap-3">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold">{n}</span>
+                    <div>
+                      <p className="text-sm font-medium">{title}</p>
+                      <p className="text-xs text-muted-foreground">{text}</p>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
+          )}
+
+          {result && busy !== 'ask' && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex flex-wrap items-center gap-2">
+                    Generated SQL
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs font-normal">
+                      {result.gen_ms !== null && <Badge variant="secondary">generated in {Math.round(result.gen_ms)} ms</Badge>}
+                      <Badge variant="secondary">ran in {Math.round(result.exec_ms)} ms</Badge>
+                      {result.attempts.length > 0 && <Badge variant="outline">auto-corrected</Badge>}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {editing ? (
+                    <Textarea
+                      value={sql}
+                      onChange={(e) => setSql(e.target.value)}
+                      onKeyDown={onKey(run)}
+                      spellCheck={false}
+                      autoFocus
+                      rows={Math.min(12, Math.max(4, sql.split('\n').length + 1))}
+                      className="font-mono text-sm"
+                    />
+                  ) : (
+                    <SqlView sql={sql} />
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {editing ? (
+                      <>
+                        <Button onClick={run} disabled={!sql.trim() || !!busy}>
+                          {busy === 'run' ? <Loader2 className="animate-spin" /> : <Play />} Run edited SQL
+                        </Button>
+                        <Button variant="ghost" onClick={() => setEditing(false)}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="secondary" onClick={() => setEditing(true)}>
+                        <Pencil /> Edit SQL
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={copy}>
+                      {copied ? <ClipboardCheck /> : <Clipboard />} {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between gap-2">
+                    Result
+                    {result.columns.length > 0 && result.rows.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => downloadCsv(result)}>
+                        <Download /> Export CSV
+                      </Button>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <StatusBanner result={result} />
+                  <ResultTable result={result} />
+                </CardContent>
+              </Card>
+            </>
           )}
 
           {history.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="size-4" /> This session
+                <CardTitle className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <History className="size-4" /> This session
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setHistory([])}>
+                    <Trash2 /> Clear
+                  </Button>
                 </CardTitle>
                 <CardDescription>Click an entry to bring back its question and SQL.</CardDescription>
               </CardHeader>
@@ -292,7 +401,7 @@ export default function Assistant() {
                     <li key={h.id}>
                       <button
                         type="button"
-                        className="flex w-full items-start gap-3 py-2 text-left text-sm hover:bg-muted/50"
+                        className="flex w-full items-start gap-3 rounded-md px-1 py-2 text-left text-sm hover:bg-muted/50"
                         onClick={() => {
                           setDb(h.db)
                           if (h.question !== '(edited SQL)') setQuestion(h.question)

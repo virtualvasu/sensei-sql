@@ -280,6 +280,21 @@ export function ErrorChart() {
 }
 
 /* ---------- student vs teacher, question by question ---------- */
+
+/** Exact two-sided McNemar test on the discordant pairs (b, c): binomial(n, 0.5) tail, doubled. */
+function mcnemarExact(b: number, c: number): number {
+  const n = b + c
+  if (n === 0) return 1
+  const k = Math.min(b, c)
+  let pmf = Math.pow(0.5, n)
+  let tail = 0
+  for (let i = 0; i <= k; i++) {
+    tail += pmf
+    pmf = (pmf * (n - i)) / (i + 1)
+  }
+  return Math.min(1, 2 * tail)
+}
+
 export function PairBar() {
   const p = results.student_vs_teacher
   const total = p.both_correct + p.student_only + p.teacher_only + p.both_wrong
@@ -289,25 +304,33 @@ export function PairBar() {
     { key: 'teacher_only', label: 'Only the teacher', n: p.teacher_only, color: 'var(--m-teacher)' },
     { key: 'both_wrong', label: 'Both wrong', n: p.both_wrong, color: 'var(--m-base)' },
   ]
+  const lead = p.teacher_only - p.student_only
+  const pValue = mcnemarExact(p.student_only, p.teacher_only)
   return (
-    <div className="space-y-3">
-      <div className="flex h-9 w-full overflow-hidden rounded-lg">
+    <div className="space-y-4">
+      <div className="flex h-3 w-full overflow-hidden rounded-full">
         {parts.map((s) => (
-          <div key={s.key} className="grid place-items-center text-xs font-medium text-white" style={{ width: `${(s.n / total) * 100}%`, background: s.color }} title={`${s.label}: ${s.n}`}>
-            {s.n / total > 0.06 ? s.n : ''}
+          <div key={s.key} style={{ width: `${(s.n / total) * 100}%`, background: s.color }} title={`${s.label}: ${s.n}`} />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {parts.map((s) => (
+          <div key={s.key} className="rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="size-2.5 rounded-full" style={{ background: s.color }} />
+              {s.label}
+            </div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums">{fmtInt(s.n)}</div>
+            <div className="text-xs text-muted-foreground tabular-nums">{pct(s.n / total, 1)}% of questions</div>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-        {parts.map((s) => (
-          <div key={s.key} className="flex items-center gap-2">
-            <span className="size-2.5 rounded-full" style={{ background: s.color }} />
-            <span>
-              {s.label} <span className="text-muted-foreground tabular-nums">· {s.n} ({pct(s.n / total, 0)}%)</span>
-            </span>
-          </div>
-        ))}
-      </div>
+      <p className="text-xs text-muted-foreground">
+        {lead === 0
+          ? 'The two models win the same number of disagreements.'
+          : `${lead > 0 ? 'The teacher' : 'The student'} wins ${Math.abs(lead)} more disagreements (${pct(Math.abs(lead) / total, 1)} points). `}
+        Exact McNemar test on the {p.student_only + p.teacher_only} disagreements: p = {pValue.toFixed(2)}, so there is no evidence that the two models differ.
+      </p>
     </div>
   )
 }
