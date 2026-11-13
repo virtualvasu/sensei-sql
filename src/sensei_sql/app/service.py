@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import sqlite3
@@ -92,6 +93,9 @@ class SQLAssistant:
     def schema(self, db: str) -> str:
         return _cached_schema(str(self.databases[db]), self.databases[db].stat().st_mtime)
 
+    def examples(self, db: str, k: int = 4) -> list[str]:
+        return suggest_questions(db, self.databases[db], k)
+
     # --- answering ------------------------------------------------------------------------
 
     def run(self, db: str, sql: str) -> ExecResult:
@@ -113,6 +117,49 @@ class SQLAssistant:
         if not sql:
             return ExecResult(ok=False, error="the model did not produce a SQL query")
         return self.run(db, sql)
+
+
+@lru_cache(maxsize=1)
+def _spider_questions() -> dict[str, list[str]]:
+    """db_id -> unique Spider questions (dev first, then train), read once from the Spider JSON files."""
+    out: dict[str, list[str]] = {}
+    for fname in ("dev.json", "train_spider.json", "train_others.json"):
+        f = SPIDER / fname
+        if not f.exists():
+            continue
+        for e in json.loads(f.read_text()):
+            qs = out.setdefault(e["db_id"], [])
+            if e["question"] not in qs:
+                qs.append(e["question"])
+    return out
+
+
+def _generic_questions(path: Path, k: int) -> list[str]:
+    """Fallback for uploaded databases: simple questions built from the table names."""
+    con = connect_read_only(path)
+    try:
+        tables = [r[0] for r in con.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
+    finally:
+        con.close()
+    qs = []
+    for t in tables[:k]:
+        label = t.replace("_", " ")
+        qs.append(f"How many rows are in the {label} table?")
+        qs.append(f"Show the first 5 rows of the {label} table.")
+    return qs[:k]
+
+
+def suggest_questions(db: str, path: Path, k: int = 4, max_len: int = 110) -> list[str]:
+    """Up to ``k`` example questions for any database: Spider questions if it is a Spider db,
+    otherwise generic ones built from its tables. Picks are spread across the list for variety."""
+    qs = [q for q in _spider_questions().get(db, []) if len(q) <= max_len]
+    if not qs:
+        return _generic_questions(path, k)
+    if len(qs) <= k:
+        return qs
+    step = len(qs) / k
+    return [qs[int(i * step)] for i in range(k)]
 
 
 @lru_cache(maxsize=256)

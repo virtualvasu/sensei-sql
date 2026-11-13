@@ -13,15 +13,6 @@ import { StatusBanner } from '@/components/StatusBanner'
 import { api, type DatabaseList, type Health, type QueryResult, type Status } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-const EXAMPLES: Record<string, string[]> = {
-  concert_singer: ['How many singers do we have?', 'Which singers are older than the average age? Show name and age.', 'What is the name and country of the youngest singer?'],
-  pets_1: ['What is the average weight of each pet type?', 'How many pets does each student own?'],
-  car_1: ['Which country has the most car makers?', 'How many car models does each maker produce?'],
-  world_1: ['What is the total population of each continent?', 'Which country has the largest surface area?'],
-  flight_2: ['Which airline operates the most flights?'],
-  student_transcripts_tracking: ['How many students are enrolled in each degree program?'],
-}
-
 interface HistoryItem {
   id: number
   time: string
@@ -46,6 +37,7 @@ export default function Assistant() {
   const [dbs, setDbs] = useState<DatabaseList['databases']>([])
   const [db, setDb] = useState<string | null>(null)
   const [schema, setSchema] = useState('')
+  const [examples, setExamples] = useState<string[]>([])
   const [question, setQuestion] = useState('')
   const [sql, setSql] = useState('')
   const [result, setResult] = useState<QueryResult | null>(null)
@@ -72,6 +64,8 @@ export default function Assistant() {
     if (!db) return
     let live = true
     api.schema(db).then((s) => live && setSchema(s.schema)).catch(() => live && setSchema(''))
+    setExamples([])
+    api.examples(db).then((r) => live && setExamples(r.examples)).catch(() => live && setExamples([]))
     return () => {
       live = false
     }
@@ -144,7 +138,6 @@ export default function Assistant() {
     }
   }
 
-  const examples = (db && EXAMPLES[db]) || []
   const tables = (schema.match(/CREATE TABLE/gi) ?? []).length
 
   return (

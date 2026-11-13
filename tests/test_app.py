@@ -154,3 +154,21 @@ def test_api_serves_built_frontend(assistant, tmp_path):
 def test_spider_databases_listed():
     dbs = service.spider_databases()
     assert "concert_singer" in dbs and len(dbs) >= 166
+
+
+def test_examples_fall_back_to_table_questions(assistant):
+    a = assistant([])
+    qs = a.examples("tiny")
+    assert qs and all(isinstance(q, str) for q in qs)
+    assert any("animal" in q for q in qs)
+
+
+def test_examples_endpoint(assistant, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from sensei_sql.app.api import create_app
+
+    c = TestClient(create_app(assistant([]), dist=tmp_path))
+    r = c.get("/api/examples", params={"db": "tiny"})
+    assert r.status_code == 200 and r.json()["examples"]
+    assert c.get("/api/examples", params={"db": "nope"}).status_code == 404

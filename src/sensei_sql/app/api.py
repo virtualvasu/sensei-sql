@@ -3,6 +3,7 @@
     GET  /api/health      backend name, title
     GET  /api/databases   database names (+ which are uploads)
     GET  /api/schema      ?db=<name>  -> schema text shown to the model
+    GET  /api/examples    ?db=<name>  -> suggested questions for that database
     POST /api/ask         {db, question} -> generated SQL, status, result table, timings
     POST /api/run         {db, sql}      -> run edited SQL through the same safe runner
     POST /api/upload      multipart file -> register a SQLite file as a database
@@ -93,6 +94,10 @@ def create_app(assistant: SQLAssistant, title: str = "sensei-sql", dist: Path = 
     @app.get("/api/schema")
     def schema(db: str):
         return {"db": known(db), "schema": assistant.schema(db)}
+
+    @app.get("/api/examples")
+    def examples(db: str):
+        return {"db": known(db), "examples": assistant.examples(db)}
 
     @app.post("/api/ask")
     def ask(req: AskRequest):

@@ -45,6 +45,7 @@ export const api = {
   health: () => call<Health>('/api/health'),
   databases: () => call<DatabaseList>('/api/databases'),
   schema: (db: string) => call<{ schema: string }>(`/api/schema?db=${encodeURIComponent(db)}`),
+  examples: (db: string) => call<{ examples: string[] }>(`/api/examples?db=${encodeURIComponent(db)}`),
   ask: (db: string, question: string) => post('/api/ask', { db, question }),
   run: (db: string, sql: string) => post('/api/run', { db, sql }),
   upload: (file: File) => {
